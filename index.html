@@ -27,7 +27,7 @@
             align-items: center;
             gap: 10px;
         }
-        select, input {
+        select {
             padding: 8px;
             font-size: 18px;
             font-family: Arial;
@@ -72,7 +72,8 @@
                     <option value="today">今天</option>
                     <option value="yesterday">昨天</option>
                 </select>
-                <input type="time" class="time-picker" value="00:00" pattern="[0-9]{2}:[0-9]{2}" inputmode="numeric">
+                <select class="hour-picker"></select> :
+                <select class="minute-picker"></select>
                 <button class="remove-btn" onclick="removeTimeInput(this)">删除</button>
             </div>
         </div>
@@ -82,6 +83,25 @@
     </div>
 
     <script>
+        // 初始化小时和分钟选择器
+        function initializeTimeSelectors(hourSelect, minuteSelect) {
+            hourSelect.innerHTML = "";
+            minuteSelect.innerHTML = "";
+            for (let h = 0; h < 24; h++) {
+                let option = document.createElement("option");
+                option.value = h.toString().padStart(2, "0");
+                option.textContent = option.value;
+                hourSelect.appendChild(option);
+            }
+            for (let m = 0; m < 60; m++) {
+                let option = document.createElement("option");
+                option.value = m.toString().padStart(2, "0");
+                option.textContent = option.value;
+                minuteSelect.appendChild(option);
+            }
+        }
+
+        // 添加新的时间输入项
         function addTimeInput() {
             let container = document.getElementById("time-container");
             let div = document.createElement("div");
@@ -91,12 +111,15 @@
                     <option value="today">今天</option>
                     <option value="yesterday">昨天</option>
                 </select>
-                <input type="time" class="time-picker" value="00:00" pattern="[0-9]{2}:[0-9]{2}" inputmode="numeric">
+                <select class="hour-picker"></select> :
+                <select class="minute-picker"></select>
                 <button class="remove-btn" onclick="removeTimeInput(this)">删除</button>
             `;
             container.appendChild(div);
+            initializeTimeSelectors(div.querySelector(".hour-picker"), div.querySelector(".minute-picker"));
         }
 
+        // 删除时间输入项
         function removeTimeInput(button) {
             let container = document.getElementById("time-container");
             if (container.children.length > 1) {
@@ -104,6 +127,7 @@
             }
         }
 
+        // 计算时间交集
         function calculateIntersection() {
             let inputs = document.querySelectorAll(".time-input");
             let allRanges = [];
@@ -114,12 +138,12 @@
 
             inputs.forEach((input) => {
                 let day = input.querySelector(".day-select").value;
-                let timeStr = input.querySelector(".time-picker").value;
-                if (!timeStr || !timeStr.includes(":")) return;
+                let hour = input.querySelector(".hour-picker").value;
+                let minute = input.querySelector(".minute-picker").value;
+                if (!hour || !minute) return;
 
-                let [hours, minutes] = timeStr.split(":").map(Number);
                 let targetTime = new Date();
-                targetTime.setHours(hours, minutes, 0, 0);
+                targetTime.setHours(Number(hour), Number(minute), 0, 0);
                 if (day === "yesterday") {
                     targetTime.setDate(targetTime.getDate() - 1);
                 }
@@ -138,7 +162,7 @@
 
                 allRanges.push([...possibleTimes]);
                 let timeLabel = day === "today" ? "今天" : "昨天";
-                let displayTime = `${timeLabel} ${timeStr}`;
+                let displayTime = `${timeLabel} ${hour}:${minute}`;
                 resultHTML += `
                     <div class="result-box">
                         <strong>${displayTime} 可选时间:</strong> 
@@ -161,8 +185,11 @@
             `;
 
             // **然后输出每个时刻的可选时间**
-            resultsDiv.innerHTML = intersectionHTML + resultHTML; // **一次性赋值，优化性能**
+            resultsDiv.innerHTML = intersectionHTML + resultHTML;
         }
+
+        // 初始化第一个时间选择器
+        initializeTimeSelectors(document.querySelector(".hour-picker"), document.querySelector(".minute-picker"));
     </script>
 
 </body>
