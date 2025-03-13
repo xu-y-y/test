@@ -31,6 +31,17 @@
             padding: 8px;
             font-size: 18px;
             font-family: Arial;
+            appearance: none; /* 隐藏默认样式 */
+            width: 80px;
+            text-align: center;
+        }
+        .scroll-select {
+            height: 40px;
+            overflow-y: auto;
+            text-align: center;
+        }
+        .scroll-select::-webkit-scrollbar {
+            display: none; /* 隐藏滚动条 */
         }
         .add-btn, .calculate-btn, .remove-btn {
             padding: 10px;
@@ -72,8 +83,13 @@
                     <option value="today">今天</option>
                     <option value="yesterday">昨天</option>
                 </select>
-                <select class="hour-picker"></select> :
-                <select class="minute-picker"></select>
+                <div class="scroll-select">
+                    <select class="hour-picker"></select>
+                </div>
+                :
+                <div class="scroll-select">
+                    <select class="minute-picker"></select>
+                </div>
                 <button class="remove-btn" onclick="removeTimeInput(this)">删除</button>
             </div>
         </div>
@@ -83,7 +99,7 @@
     </div>
 
     <script>
-        // 初始化小时和分钟选择器
+        // 初始化滚轮选择器
         function initializeTimeSelectors(hourSelect, minuteSelect) {
             hourSelect.innerHTML = "";
             minuteSelect.innerHTML = "";
@@ -111,8 +127,13 @@
                     <option value="today">今天</option>
                     <option value="yesterday">昨天</option>
                 </select>
-                <select class="hour-picker"></select> :
-                <select class="minute-picker"></select>
+                <div class="scroll-select">
+                    <select class="hour-picker"></select>
+                </div>
+                :
+                <div class="scroll-select">
+                    <select class="minute-picker"></select>
+                </div>
                 <button class="remove-btn" onclick="removeTimeInput(this)">删除</button>
             `;
             container.appendChild(div);
@@ -184,7 +205,6 @@
                 </div>
             `;
 
-            // **然后输出每个时刻的可选时间**
             resultsDiv.innerHTML = intersectionHTML + resultHTML;
         }
 
