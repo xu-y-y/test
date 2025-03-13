@@ -1,0 +1,181 @@
+<!DOCTYPE html>
+<html lang="zh">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>时间交集计算器</title>
+    <style>
+        body {
+            font-family: "Microsoft YaHei", Arial, sans-serif;
+            background-color: #f4f4f4;
+            text-align: center;
+            padding: 20px;
+        }
+        .container {
+            background: white;
+            padding: 20px;
+            border-radius: 10px;
+            box-shadow: 0 0 10px rgba(0, 0, 0, 0.1);
+            display: inline-block;
+            width: 90%;
+            max-width: 500px;
+        }
+        .time-input {
+            margin: 10px 0;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            gap: 10px;
+        }
+        select {
+            padding: 8px;
+            font-size: 18px;
+            font-family: Arial;
+        }
+        .add-btn, .calculate-btn {
+            margin-top: 10px;
+            padding: 10px;
+            font-size: 16px;
+            background: #007BFF;
+            color: white;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+        }
+        .add-btn:hover, .calculate-btn:hover {
+            background: #0056b3;
+        }
+        .remove-btn {
+            padding: 8px;
+            font-size: 14px;
+            background: #dc3545;
+            color: white;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+        }
+        .remove-btn:hover {
+            background: #c82333;
+        }
+        #results {
+            margin-top: 20px;
+            font-size: 18px;
+            text-align: left;
+        }
+        .result-box {
+            background: #fff;
+            padding: 10px;
+            margin: 10px 0;
+            border-radius: 5px;
+            box-shadow: 0 0 5px rgba(0, 0, 0, 0.1);
+        }
+    </style>
+</head>
+<body>
+
+    <div class="container">
+        <h2>时间交集计算器</h2>
+        <div id="time-container">
+            <div class="time-input">
+                <select class="day-select">
+                    <option value="today">今天</option>
+                    <option value="yesterday">昨天</option>
+                </select>
+                <select class="hour-select"></select>
+                <select class="minute-select">
+                    <option value="0">00 分</option>
+                    <option value="30">30 分</option>
+                </select>
+                <button class="remove-btn" onclick="removeTimeInput(this)">删除</button>
+            </div>
+        </div>
+        <button class="add-btn" onclick="addTimeInput()">添加时间</button>
+        <button class="calculate-btn" onclick="calculateIntersection()">计算交集</button>
+        <div id="results"></div>
+    </div>
+
+    <script>
+        function populateHourOptions() {
+            return Array.from({ length: 24 }, (_, i) => `<option value="${i}">${i} 时</option>`).join("");
+        }
+
+        document.querySelector(".hour-select").innerHTML = populateHourOptions();
+
+        function addTimeInput() {
+            let container = document.getElementById("time-container");
+            let div = document.createElement("div");
+            div.className = "time-input";
+            div.innerHTML = `
+                <select class="day-select">
+                    <option value="today">今天</option>
+                    <option value="yesterday">昨天</option>
+                </select>
+                <select class="hour-select">${populateHourOptions()}</select>
+                <select class="minute-select">
+                    <option value="0">00 分</option>
+                    <option value="30">30 分</option>
+                </select>
+                <button class="remove-btn" onclick="removeTimeInput(this)">删除</button>
+            `;
+            container.appendChild(div);
+        }
+
+        function removeTimeInput(button) {
+            let container = document.getElementById("time-container");
+            if (container.children.length > 1) {
+                button.parentElement.remove();
+            }
+        }
+
+        function calculateIntersection() {
+            let inputs = document.querySelectorAll(".time-input");
+            let allRanges = [];
+            let resultsDiv = document.getElementById("results");
+            resultsDiv.innerHTML = ""; // 清空结果
+
+            inputs.forEach((input) => {
+                let day = input.querySelector(".day-select").value;
+                let hour = parseInt(input.querySelector(".hour-select").value);
+                let minute = parseInt(input.querySelector(".minute-select").value);
+                let totalMinutes = (day === "yesterday" ? -24 * 60 : 0) + hour * 60 + minute;
+
+                // **计算 start_time（严格减去 3 小时）**
+                let startMinutes = totalMinutes - 180;
+
+                // **筛选 `xx:00` 或 `xx:30`**
+                let possibleTimes = [];
+                for (let m = startMinutes; m <= totalMinutes; m += 30) {
+                    let h = Math.floor(m / 60);
+                    let min = m % 60;
+                    let formattedTime = `${(h + 24) % 24}:${min === 0 ? "00" : "30"}`;
+                    possibleTimes.push(formattedTime);
+                }
+
+                allRanges.push(possibleTimes);
+
+                // **显示当前时间的可选时间**
+                let timeLabel = day === "today" ? "今天" : "昨天";
+                let displayTime = `${timeLabel} ${hour}:${minute < 10 ? "0" + minute : minute}`;
+                resultsDiv.innerHTML += `
+                    <div class="result-box">
+                        <strong>${displayTime} 可选时间:</strong> 
+                        <br>${possibleTimes.join(", ")}
+                    </div>
+                `;
+            });
+
+            // **计算交集**
+            let intersection = allRanges.reduce((a, b) => a.filter(time => b.includes(time)), allRanges[0] || []);
+
+            // **输出交集**
+            resultsDiv.innerHTML += `
+                <div class="result-box">
+                    <strong>可选时间交集：</strong> 
+                    <br>${intersection.length > 0 ? intersection.join(", ") : "无交集"}
+                </div>
+            `;
+        }
+    </script>
+
+</body>
+</html>
