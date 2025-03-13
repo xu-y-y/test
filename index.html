@@ -30,7 +30,6 @@
         select, input {
             padding: 8px;
             font-size: 18px;
-            font-family: Arial;
         }
         .add-btn, .calculate-btn, .remove-btn {
             padding: 10px;
@@ -54,11 +53,11 @@
             box-shadow: 0 0 5px rgba(0, 0, 0, 0.1);
         }
         .intersection-box {
-            background: #d9f1ff;
+            background: #dff0ff;
             padding: 15px;
-            margin-bottom: 10px;
             border-radius: 5px;
-            box-shadow: 0 0 5px rgba(0, 0, 0, 0.1);
+            font-weight: bold;
+            text-align: center;
         }
     </style>
 </head>
@@ -72,7 +71,7 @@
                     <option value="today">今天</option>
                     <option value="tomorrow">明天</option>
                 </select>
-                <input type="time" class="time-picker">
+                <input type="time" class="time-picker" value="00:00">
                 <button class="remove-btn" onclick="removeTimeInput(this)">删除</button>
             </div>
         </div>
@@ -91,7 +90,7 @@
                     <option value="today">今天</option>
                     <option value="tomorrow">明天</option>
                 </select>
-                <input type="time" class="time-picker">
+                <input type="time" class="time-picker" value="00:00">
                 <button class="remove-btn" onclick="removeTimeInput(this)">删除</button>
             `;
             container.appendChild(div);
@@ -104,13 +103,24 @@
             }
         }
 
+        function formatDateLabel(date) {
+            const now = new Date();
+            const today = now.setHours(0, 0, 0, 0);
+            const target = date.setHours(0, 0, 0, 0);
+
+            if (target === today) return "今天";
+            if (target === today - 86400000) return "昨天";
+            if (target === today + 86400000) return "明天";
+            return date.toLocaleDateString();
+        }
+
         function calculateIntersection() {
             let inputs = document.querySelectorAll(".time-input");
             let allRanges = [];
             let resultsDiv = document.getElementById("results");
-            resultsDiv.innerHTML = "";
+            let resultHTML = "";
 
-            let groupedTimes = { "今天": new Set(), "明天": new Set() };
+            resultsDiv.innerHTML = "";
 
             inputs.forEach((input) => {
                 let day = input.querySelector(".day-select").value;
@@ -118,52 +128,54 @@
                 if (!timeStr) return;
 
                 let [hours, minutes] = timeStr.split(":").map(Number);
-                let now = new Date();
                 let targetTime = new Date();
+                if (day === "tomorrow") targetTime.setDate(targetTime.getDate() + 1);
                 targetTime.setHours(hours, minutes, 0, 0);
-                if (day === "tomorrow") {
-                    targetTime.setDate(targetTime.getDate() + 1);
-                }
 
                 let startTime = new Date(targetTime.getTime() - 3 * 60 * 60 * 1000);
-                let possibleTimes = new Set();
+                let possibleTimes = { "昨天": [], "今天": [], "明天": [] };
 
-                for (let t = startTime.getTime(); t <= targetTime.getTime(); t += 30 * 60 * 1000) {
-                    let timeObj = new Date(t);
-                    let h = timeObj.getHours();
-                    let m = timeObj.getMinutes();
-                    let dayLabel = timeObj.getDate() === now.getDate() ? "今天" : "明天";
-                    possibleTimes.add(`${String(h).padStart(2, "0")}:${m === 0 ? "00" : "30"}`);
-                    groupedTimes[dayLabel].add(`${String(h).padStart(2, "0")}:${m === 0 ? "00" : "30"}`);
+                for (let t = startTime.getTime(); t <= targetTime.getTime(); t += 60 * 1000) {
+                    let tempDate = new Date(t);
+                    let dateLabel = formatDateLabel(new Date(t));
+                    let h = tempDate.getHours();
+                    let m = tempDate.getMinutes();
+                    if (m === 0 || m === 30) {
+                        let formattedTime = `${String(h).padStart(2, "0")}:${m === 0 ? "00" : "30"}`;
+                        possibleTimes[dateLabel].push(formattedTime);
+                    }
                 }
 
-                allRanges.push([...possibleTimes]);
+                allRanges.push(possibleTimes);
+                let displayTime = `${day === "today" ? "今天" : "明天"} ${timeStr}`;
+                let possibleTimesHTML = Object.entries(possibleTimes)
+                    .filter(([_, times]) => times.length > 0)
+                    .map(([label, times]) => `<strong>${label}：</strong> ${times.join(", ")}`)
+                    .join("<br>");
+
+                resultHTML += `
+                    <div class="result-box">
+                        <strong>${displayTime} 可选时间:</strong> <br>${possibleTimesHTML}
+                    </div>
+                `;
             });
 
-            // 计算交集
-            let intersection = allRanges.length > 0
-                ? allRanges.reduce((a, b) => a.filter(time => b.includes(time)), allRanges[0])
-                : [];
-
-            let intersectionGrouped = { "今天": [], "明天": [] };
-            intersection.forEach(time => {
-                if (groupedTimes["今天"].has(time)) {
-                    intersectionGrouped["今天"].push(time);
-                } else if (groupedTimes["明天"].has(time)) {
-                    intersectionGrouped["明天"].push(time);
-                }
-            });
+            let commonTimes = { "昨天": [], "今天": [], "明天": [] };
+            for (let dateLabel of Object.keys(commonTimes)) {
+                let timeSets = allRanges.map(range => new Set(range[dateLabel]));
+                commonTimes[dateLabel] = [...timeSets.reduce((a, b) => new Set([...a].filter(x => b.has(x))), timeSets[0] || new Set())];
+            }
 
             let intersectionHTML = `
                 <div class="intersection-box">
-                    <strong>可选时间交集：</strong> 
-                    <br>${intersectionGrouped["今天"].length > 0 ? "今天：" + intersectionGrouped["今天"].join(", ") : ""}
-                    <br>${intersectionGrouped["明天"].length > 0 ? "明天：" + intersectionGrouped["明天"].join(", ") : ""}
-                    ${intersection.length === 0 ? "无交集" : ""}
+                    <strong>可选时间交集：</strong> <br>
+                    ${Object.entries(commonTimes).filter(([_, times]) => times.length > 0)
+                        .map(([label, times]) => `<strong>${label}：</strong> ${times.join(", ")}`)
+                        .join("<br>") || "无交集"}
                 </div>
             `;
 
-            resultsDiv.innerHTML = intersectionHTML;
+            resultsDiv.innerHTML = intersectionHTML + resultHTML;
         }
     </script>
 
