@@ -27,21 +27,10 @@
             align-items: center;
             gap: 10px;
         }
-        select {
+        select, input {
             padding: 8px;
             font-size: 18px;
             font-family: Arial;
-            appearance: none; /* 隐藏默认样式 */
-            width: 80px;
-            text-align: center;
-        }
-        .scroll-select {
-            height: 40px;
-            overflow-y: auto;
-            text-align: center;
-        }
-        .scroll-select::-webkit-scrollbar {
-            display: none; /* 隐藏滚动条 */
         }
         .add-btn, .calculate-btn, .remove-btn {
             padding: 10px;
@@ -65,11 +54,11 @@
             box-shadow: 0 0 5px rgba(0, 0, 0, 0.1);
         }
         .intersection-box {
-            background: #dff0ff; /* 浅蓝色背景 */
+            background: #d9f1ff;
             padding: 15px;
+            margin-bottom: 10px;
             border-radius: 5px;
-            font-weight: bold;
-            text-align: center;
+            box-shadow: 0 0 5px rgba(0, 0, 0, 0.1);
         }
     </style>
 </head>
@@ -81,15 +70,9 @@
             <div class="time-input">
                 <select class="day-select">
                     <option value="today">今天</option>
-                    <option value="yesterday">昨天</option>
+                    <option value="tomorrow">明天</option>
                 </select>
-                <div class="scroll-select">
-                    <select class="hour-picker"></select>
-                </div>
-                :
-                <div class="scroll-select">
-                    <select class="minute-picker"></select>
-                </div>
+                <input type="time" class="time-picker">
                 <button class="remove-btn" onclick="removeTimeInput(this)">删除</button>
             </div>
         </div>
@@ -99,25 +82,6 @@
     </div>
 
     <script>
-        // 初始化滚轮选择器
-        function initializeTimeSelectors(hourSelect, minuteSelect) {
-            hourSelect.innerHTML = "";
-            minuteSelect.innerHTML = "";
-            for (let h = 0; h < 24; h++) {
-                let option = document.createElement("option");
-                option.value = h.toString().padStart(2, "0");
-                option.textContent = option.value;
-                hourSelect.appendChild(option);
-            }
-            for (let m = 0; m < 60; m++) {
-                let option = document.createElement("option");
-                option.value = m.toString().padStart(2, "0");
-                option.textContent = option.value;
-                minuteSelect.appendChild(option);
-            }
-        }
-
-        // 添加新的时间输入项
         function addTimeInput() {
             let container = document.getElementById("time-container");
             let div = document.createElement("div");
@@ -125,22 +89,14 @@
             div.innerHTML = `
                 <select class="day-select">
                     <option value="today">今天</option>
-                    <option value="yesterday">昨天</option>
+                    <option value="tomorrow">明天</option>
                 </select>
-                <div class="scroll-select">
-                    <select class="hour-picker"></select>
-                </div>
-                :
-                <div class="scroll-select">
-                    <select class="minute-picker"></select>
-                </div>
+                <input type="time" class="time-picker">
                 <button class="remove-btn" onclick="removeTimeInput(this)">删除</button>
             `;
             container.appendChild(div);
-            initializeTimeSelectors(div.querySelector(".hour-picker"), div.querySelector(".minute-picker"));
         }
 
-        // 删除时间输入项
         function removeTimeInput(button) {
             let container = document.getElementById("time-container");
             if (container.children.length > 1) {
@@ -148,42 +104,45 @@
             }
         }
 
-        // 计算时间交集
         function calculateIntersection() {
             let inputs = document.querySelectorAll(".time-input");
             let allRanges = [];
             let resultsDiv = document.getElementById("results");
-            let resultHTML = ""; // 使用字符串拼接优化性能
+            let resultHTML = "";
 
-            resultsDiv.innerHTML = ""; // 清空之前的结果
+            resultsDiv.innerHTML = "";
 
             inputs.forEach((input) => {
                 let day = input.querySelector(".day-select").value;
-                let hour = input.querySelector(".hour-picker").value;
-                let minute = input.querySelector(".minute-picker").value;
-                if (!hour || !minute) return;
+                let timeStr = input.querySelector(".time-picker").value;
+                if (!timeStr) return;
 
+                let [hours, minutes] = timeStr.split(":").map(Number);
+                let now = new Date();
                 let targetTime = new Date();
-                targetTime.setHours(Number(hour), Number(minute), 0, 0);
-                if (day === "yesterday") {
-                    targetTime.setDate(targetTime.getDate() - 1);
+                targetTime.setHours(hours, minutes, 0, 0);
+                if (day === "tomorrow") {
+                    targetTime.setDate(targetTime.getDate() + 1);
                 }
 
-                // 计算 3 小时前的时间
                 let startTime = new Date(targetTime.getTime() - 3 * 60 * 60 * 1000);
-                let possibleTimes = new Set();
+                let startMinutes = startTime.getMinutes();
+                if (startMinutes !== 0 && startMinutes !== 30) {
+                    startTime.setMinutes(startMinutes < 30 ? 0 : 30);
+                }
 
-                for (let t = startTime.getTime(); t <= targetTime.getTime(); t += 60 * 1000) {
-                    let h = new Date(t).getHours();
-                    let m = new Date(t).getMinutes();
-                    if (m === 0 || m === 30) {
-                        possibleTimes.add(`${String(h).padStart(2, "0")}:${m === 0 ? "00" : "30"}`);
-                    }
+                let possibleTimes = new Set();
+                for (let t = startTime.getTime(); t <= targetTime.getTime(); t += 30 * 60 * 1000) {
+                    let timeObj = new Date(t);
+                    let h = timeObj.getHours();
+                    let m = timeObj.getMinutes();
+                    let dayLabel = timeObj.getDate() === now.getDate() ? "今天" : "明天";
+                    possibleTimes.add(`${dayLabel} ${String(h).padStart(2, "0")}:${m === 0 ? "00" : "30"}`);
                 }
 
                 allRanges.push([...possibleTimes]);
-                let timeLabel = day === "today" ? "今天" : "昨天";
-                let displayTime = `${timeLabel} ${hour}:${minute}`;
+                let timeLabel = day === "today" ? "今天" : "明天";
+                let displayTime = `${timeLabel} ${timeStr}`;
                 resultHTML += `
                     <div class="result-box">
                         <strong>${displayTime} 可选时间:</strong> 
@@ -192,12 +151,10 @@
                 `;
             });
 
-            // 计算交集
             let intersection = allRanges.length > 0
                 ? allRanges.reduce((a, b) => a.filter(time => b.includes(time)), allRanges[0])
                 : [];
 
-            // **先输出交集**
             let intersectionHTML = `
                 <div class="intersection-box">
                     <strong>可选时间交集：</strong> 
@@ -207,9 +164,6 @@
 
             resultsDiv.innerHTML = intersectionHTML + resultHTML;
         }
-
-        // 初始化第一个时间选择器
-        initializeTimeSelectors(document.querySelector(".hour-picker"), document.querySelector(".minute-picker"));
     </script>
 
 </body>
