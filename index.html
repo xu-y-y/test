@@ -176,7 +176,50 @@
                 }
             }
 
-            // 两两取交集
+            // 检查所有集合是否有共同交集
+            let commonIntersection = { "昨天": [], "今天": [], "明天": [] };
+            for (let dateLabel of Object.keys(commonIntersection)) {
+                let timeSets = uniqueRanges.map(range => new Set(range.times[dateLabel]));
+                commonIntersection[dateLabel] = [...timeSets.reduce((a, b) => new Set([...a].filter(x => b.has(x))), timeSets[0] || new Set())];
+            }
+
+            // 如果有共同交集，则直接输出
+            if (Object.values(commonIntersection).some(times => times.length > 0)) {
+                let intersectionHTML = `
+                    <div class="intersection-box">
+                        <div class="intersection-title">最大交集结果</div>
+                        <div class="intersection-content">
+                            <strong>交集 1（对应输入时间：${uniqueRanges.map(range => range.inputTime).join(", ")}）：</strong> <br>
+                            ${Object.entries(commonIntersection).filter(([_, times]) => times.length > 0)
+                                .map(([label, times]) => `<strong>${label}：</strong> ${times.join(", ")}`)
+                                .join("；")}
+                        </div>
+                    </div>
+                `;
+
+                // 显示每个输入时间的可选时间（过滤重复输入时间）
+                let seenInputTimesForDisplay = new Set();
+                let optionalTimesHTML = "";
+                for (let range of allRanges) {
+                    if (!seenInputTimesForDisplay.has(range.inputTime)) {
+                        seenInputTimesForDisplay.add(range.inputTime);
+                        let possibleTimesHTML = Object.entries(range.times)
+                            .filter(([_, times]) => times.length > 0)
+                            .map(([label, times]) => `<strong>${label}：</strong> ${times.join(", ")}`)
+                            .join("<br>");
+                        optionalTimesHTML += `
+                            <div class="result-box">
+                                <strong>${range.inputTime} 可选时间:</strong> <br>${possibleTimesHTML}
+                            </div>
+                        `;
+                    }
+                }
+
+                resultsDiv.innerHTML = intersectionHTML + optionalTimesHTML;
+                return;
+            }
+
+            // 如果没有共同交集，则使用贪心算法
             let intersections = [];
             for (let i = 0; i < uniqueRanges.length; i++) {
                 for (let j = i + 1; j < uniqueRanges.length; j++) {
@@ -235,11 +278,40 @@
                 }
             }
 
+            // 合并交集
+            let mergedIntersections = [];
+            for (let intersection of selectedIntersections) {
+                let merged = false;
+                for (let mergedIntersection of mergedIntersections) {
+                    let commonTimes = { "昨天": [], "今天": [], "明天": [] };
+
+                    for (let dateLabel of Object.keys(commonTimes)) {
+                        let timesA = new Set(mergedIntersection.times[dateLabel]);
+                        let timesB = new Set(intersection.times[dateLabel]);
+                        commonTimes[dateLabel] = [...timesA].filter(time => timesB.has(time));
+                    }
+
+                    if (Object.values(commonTimes).some(times => times.length > 0)) {
+                        for (let dateLabel of Object.keys(commonTimes)) {
+                            mergedIntersection.times[dateLabel] = [...new Set([...mergedIntersection.times[dateLabel], ...intersection.times[dateLabel]])];
+                        }
+                        mergedIntersection.sets = [...new Set([...mergedIntersection.sets, ...intersection.sets])];
+                        mergedIntersection.inputTimes = [...new Set([...mergedIntersection.inputTimes, ...intersection.inputTimes])];
+                        merged = true;
+                        break;
+                    }
+                }
+
+                if (!merged) {
+                    mergedIntersections.push(intersection);
+                }
+            }
+
             // 显示交集结果
             let intersectionHTML = `
                 <div class="intersection-box">
                     <div class="intersection-title">最大交集结果</div>
-                    ${selectedIntersections.map((intersection, idx) => {
+                    ${mergedIntersections.map((intersection, idx) => {
                         let timeRanges = Object.entries(intersection.times)
                             .filter(([_, times]) => times.length > 0)
                             .map(([label, times]) => `${label}：${times.join(", ")}`)
