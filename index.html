@@ -164,26 +164,24 @@
 
                 // 存储当前输入的可选时间
                 allRanges.push({ index: index + 1, times: possibleTimes, inputTime: `${day === "today" ? "今天" : "明天"} ${timeStr}` });
-
-                // 显示当前输入的可选时间
-                let possibleTimesHTML = Object.entries(possibleTimes)
-                    .filter(([_, times]) => times.length > 0)
-                    .map(([label, times]) => `<strong>${label}：</strong> ${times.join(", ")}`)
-                    .join("<br>");
-
-                resultHTML += `
-                    <div class="result-box">
-                        <strong>${day === "today" ? "今天" : "明天"} ${timeStr} 可选时间:</strong> <br>${possibleTimesHTML}
-                    </div>
-                `;
             });
+
+            // 过滤相同输入时间的集合
+            let uniqueRanges = [];
+            let seenInputTimes = new Set();
+            for (let range of allRanges) {
+                if (!seenInputTimes.has(range.inputTime)) {
+                    seenInputTimes.add(range.inputTime);
+                    uniqueRanges.push(range);
+                }
+            }
 
             // 两两取交集
             let intersections = [];
-            for (let i = 0; i < allRanges.length; i++) {
-                for (let j = i + 1; j < allRanges.length; j++) {
-                    let setA = allRanges[i];
-                    let setB = allRanges[j];
+            for (let i = 0; i < uniqueRanges.length; i++) {
+                for (let j = i + 1; j < uniqueRanges.length; j++) {
+                    let setA = uniqueRanges[i];
+                    let setB = uniqueRanges[j];
                     let commonTimes = { "昨天": [], "今天": [], "明天": [] };
 
                     for (let dateLabel of Object.keys(commonTimes)) {
@@ -206,7 +204,7 @@
             let selectedIntersections = [];
             let coveredSets = new Set();
 
-            while (coveredSets.size < allRanges.length) {
+            while (coveredSets.size < uniqueRanges.length) {
                 let bestIntersection = null;
                 let maxCoverage = 0;
 
@@ -223,7 +221,7 @@
                     bestIntersection.sets.forEach(set => coveredSets.add(set));
                 } else {
                     // 没有更多交集可选，将未覆盖的集合作为独立交集
-                    allRanges.forEach(range => {
+                    uniqueRanges.forEach(range => {
                         if (!coveredSets.has(range.index)) {
                             selectedIntersections.push({
                                 sets: [range.index],
@@ -256,7 +254,25 @@
                 </div>
             `;
 
-            resultsDiv.innerHTML = intersectionHTML + resultHTML;
+            // 显示每个输入时间的可选时间（过滤重复输入时间）
+            let seenInputTimesForDisplay = new Set();
+            let optionalTimesHTML = "";
+            for (let range of allRanges) {
+                if (!seenInputTimesForDisplay.has(range.inputTime)) {
+                    seenInputTimesForDisplay.add(range.inputTime);
+                    let possibleTimesHTML = Object.entries(range.times)
+                        .filter(([_, times]) => times.length > 0)
+                        .map(([label, times]) => `<strong>${label}：</strong> ${times.join(", ")}`)
+                        .join("<br>");
+                    optionalTimesHTML += `
+                        <div class="result-box">
+                            <strong>${range.inputTime} 可选时间:</strong> <br>${possibleTimesHTML}
+                        </div>
+                    `;
+                }
+            }
+
+            resultsDiv.innerHTML = intersectionHTML + optionalTimesHTML;
         }
     </script>
 
