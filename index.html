@@ -145,6 +145,20 @@
             return possibleTimes;
         }
 
+        // 检查是否被覆盖
+        function isCovered(intersection, mergedIntersections) {
+            let inputTimeCounts = new Map();
+            for (let mergedIntersection of mergedIntersections) {
+                if (intersection === mergedIntersection) continue;
+                for (let inputTime of mergedIntersection.inputTimes) {
+                    inputTimeCounts.set(inputTime, (inputTimeCounts.get(inputTime) || 0) + 1);
+                }
+            }
+
+            // 检查交集的每个输入时间是否都在其他交集中至少出现一次
+            return intersection.inputTimes.every(inputTime => inputTimeCounts.get(inputTime) >= 1);
+        }
+
         // 计算交集
         function calculateIntersection() {
             let inputs = document.querySelectorAll(".time-input");
@@ -253,11 +267,19 @@
                 }
             }
 
+            // 去掉被完全覆盖的交集
+            let finalIntersections = [];
+            for (let intersection of mergedIntersections) {
+                if (!isCovered(intersection, mergedIntersections)) {
+                    finalIntersections.push(intersection);
+                }
+            }
+
             // 显示交集结果
             let intersectionHTML = `
                 <div class="intersection-box">
-                    <div class="intersection-title">最优交集结果</div>
-                    ${mergedIntersections.map((intersection, idx) => {
+                    <div class="intersection-title">最大交集结果</div>
+                    ${finalIntersections.map((intersection, idx) => {
                         let timeRanges = Object.entries(intersection.times)
                             .filter(([_, times]) => times.length > 0)
                             .map(([label, times]) => `${label}：${times.join(", ")}`)
