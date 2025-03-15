@@ -275,6 +275,27 @@
                 }
             }
 
+            // 确保所有输入时间都被覆盖
+            let allInputTimes = new Set(uniqueRanges.map(range => range.inputTime));
+            let coveredInputTimes = new Set();
+            for (let intersection of finalIntersections) {
+                intersection.inputTimes.forEach(inputTime => coveredInputTimes.add(inputTime));
+            }
+
+            for (let inputTime of allInputTimes) {
+                if (!coveredInputTimes.has(inputTime)) {
+                    // 找到对应的集合
+                    let range = uniqueRanges.find(range => range.inputTime === inputTime);
+                    if (range) {
+                        finalIntersections.push({
+                            sets: [range.index],
+                            times: range.times,
+                            inputTimes: [range.inputTime]
+                        });
+                    }
+                }
+            }
+
             // 显示交集结果
             let intersectionHTML = `
                 <div class="intersection-box">
