@@ -278,7 +278,7 @@
             // 显示交集结果
             let intersectionHTML = `
                 <div class="intersection-box">
-                    <div class="intersection-title">最大交集结果</div>
+                    <div class="intersection-title">最优交集结果</div>
                     ${finalIntersections.map((intersection, idx) => {
                         let timeRanges = Object.entries(intersection.times)
                             .filter(([_, times]) => times.length > 0)
